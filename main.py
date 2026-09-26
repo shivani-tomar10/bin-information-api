@@ -108,8 +108,6 @@ def delete_bin(data: BinRequest):
     return {"message": "BIN deleted successfully"}
 
 # AUTO SUGGESTION
-
-# AUTO SUGGESTION
 @app.post("/bin/suggest")
 def suggest_bin(data: SuggestionRequest):
 
