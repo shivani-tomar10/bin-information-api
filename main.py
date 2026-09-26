@@ -1,8 +1,9 @@
 import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
-from pydantic import BaseModel
 import mysql.connector
+from module import BinRequest, BinCreateRequest, SuggestionRequest
+
 
 app = FastAPI()
 load_dotenv()
@@ -17,11 +18,6 @@ connection = mysql.connector.connect(
 )
 
 cursor = connection.cursor()
-
-
-# Request model for finding/deleting a BIN
-class BinRequest(BaseModel):
-    bin_iin: str
 
 
 # GET/FIND BIN
@@ -39,15 +35,6 @@ def get_bin(data: BinRequest):
         return {"message": "BIN not found"}
 
     return {"data": row}
-
-
-# Request model for creating/updating a BIN
-class BinCreateRequest(BaseModel):
-    bin_iin: str
-    network: str
-    card_type: str
-    card_category: str
-    issuer: str
 
 
 # CREATE BIN
@@ -119,3 +106,50 @@ def delete_bin(data: BinRequest):
         return {"message": "BIN not found"}
 
     return {"message": "BIN deleted successfully"}
+
+# AUTO SUGGESTION
+
+# AUTO SUGGESTION
+@app.post("/bin/suggest")
+def suggest_bin(data: SuggestionRequest):
+
+    search = data.query.strip()
+
+    if not search:
+        return {"suggestions": []}
+
+    search = f"%{search}%"
+
+    cursor.execute(
+        """
+        SELECT *
+        FROM bin_data
+        WHERE bin_iin LIKE %s
+           OR network LIKE %s
+           OR card_category LIKE %s
+           OR issuer LIKE %s
+        LIMIT 10
+        """,
+        (
+            search,
+            search,
+            search,
+            search
+        )
+    )
+
+    rows = cursor.fetchall()
+
+    return {
+        "suggestions": [
+            {
+                "id": row[0],
+                "bin_iin": row[1],
+                "network": row[2],
+                "card_type": row[3],
+                "card_category": row[4],
+                "issuer": row[5]
+            }
+            for row in rows
+        ]
+    }
